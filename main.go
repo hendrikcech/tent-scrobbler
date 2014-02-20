@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/hendrikcech/tent-scrobbler/config"
 	"github.com/hendrikcech/tent-scrobbler/spotify"
+	"github.com/hendrikcech/tent-scrobbler/example"
 	store "github.com/hendrikcech/tent-scrobbler/tent"
 	"github.com/hendrikcech/tent-scrobbler/track"
 	"github.com/tent/tent-client-go"
@@ -17,20 +18,26 @@ import (
 const PostType string = "http://cech.im/types/song/v0#"
 
 var entity *string
-var player *string
+var playerSelection *string
+var playerMap map[string]func() (track.Track, error)
+var player func() (track.Track, error)
 
 var configFilePath string
 
 func init() {
 	// parse arguments
 	entity = flag.String("entity", "", "set entity")
-	player = flag.String("player", "", "specify player")
+	playerSelection = flag.String("player", "", "specify player")
 	flag.Parse()
 
 	// get path to config file
 	usr, err := user.Current()
 	maybePanic(err)
 	configFilePath = usr.HomeDir + "/.tentscrobbler"
+
+	playerMap = make(map[string]func() (track.Track, error))
+	playerMap["spotify"] = spotify.CurrentTrack
+	playerMap["example"] = example.CurrentTrack
 }
 
 func main() {
@@ -63,8 +70,8 @@ func main() {
 		}
 	}
 
-	if *player != "" {
-		c.Player = *player
+	if *playerSelection != "" {
+		c.Player = *playerSelection
 	}
 
 	if c.ID == "" || c.Key == "" || c.App == "" || len(c.Servers) == 0 {
@@ -72,14 +79,18 @@ func main() {
 		os.Exit(1)
 	}
 	if c.Player == "" {
-		fmt.Println("no player specified. running with default (spotify).")
+		fmt.Println("no player specified. running with default (spotify for osx).")
 		c.Player = "spotify"
 	}
 
 	err = config.Write(c, configFilePath)
 	maybePanic(err)
 
-	// TODO: select player by setting up map[string]interface{}(?) with string maped to static imported package
+	player = playerMap[c.Player]
+	if player == nil {
+		fmt.Println("specified player not found.")
+		os.Exit(1)
+	}
 
 	// setup queue
 	tracks := make(chan track.Track)
@@ -108,7 +119,7 @@ func watchPlayer(tracks chan track.Track) {
 	ticker := time.NewTicker(time.Millisecond * 1000)
 
 	for _ = range ticker.C {
-		track, err = spotify.CurrentTrack()
+		track, err = player()
 		maybePanic(err)
 
 		if track.Name == "" {
@@ -149,7 +160,7 @@ func watchTrack(scrobbles chan track.Track, track track.Track) {
 
 	log(fmt.Sprintf("come back for%s", track.Name))
 
-	currentTrack, err := spotify.CurrentTrack()
+	currentTrack, err := player()
 	maybePanic(err)
 
 	if currentTrack.ID == track.ID {
