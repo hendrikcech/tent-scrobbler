@@ -8,6 +8,7 @@ import (
 	store "github.com/hendrikcech/tent-scrobbler/tent"
 	"github.com/hendrikcech/tent-scrobbler/track"
 	"github.com/tent/tent-client-go"
+	"github.com/tent/hawk-go"
 	"os"
 	"os/user"
 	"time"
@@ -16,14 +17,14 @@ import (
 const PostType string = "http://cech.im/types/song/v0#"
 
 var entity *string
+var player *string
 
-// var player *string
 var configFilePath string
 
 func init() {
 	// parse arguments
 	entity = flag.String("entity", "", "set entity")
-	// player = flag.String("player", "", "specify player")
+	player = flag.String("player", "", "specify player")
 	flag.Parse()
 
 	// get path to config file
@@ -34,28 +35,53 @@ func init() {
 
 func main() {
 	var client *tent.Client
+	var c config.Config
 	var err error
 
 	exists := config.Exists(configFilePath)
 
-	switch {
-	case *entity != "":
-		client, err = store.AuthUser(*entity, PostType)
+	if exists {
+		c, err = config.Read(configFilePath)
 		maybePanic(err)
-		err = config.Write(client, configFilePath)
-
-	case !exists && *entity == "":
-		fmt.Println("No config found. Usage:")
-		flag.PrintDefaults()
-		os.Exit(1)
-
-	case exists && *entity == "":
-		// start programm
-		client, err = config.Read(configFilePath)
-		maybePanic(err)
-		fmt.Print("start programm")
 	}
 
+	if *entity != "" {
+		client, err = store.AuthUser(*entity, PostType)
+		maybePanic(err)
+		c.ID = client.Credentials.ID
+		c.Key = client.Credentials.Key
+		c.App = client.Credentials.App
+		c.Servers = client.Servers
+	} else {
+		client = &tent.Client{
+			Servers: c.Servers,
+			Credentials: &hawk.Credentials{
+				ID: c.ID,
+				Key: c.Key,
+				App: c.App,
+			},
+		}
+	}
+
+	if *player != "" {
+		c.Player = *player
+	}
+
+	if c.ID == "" || c.Key == "" || c.App == "" || len(c.Servers) == 0 {
+		fmt.Println("invalid entity config. run again with -entity entity")
+		os.Exit(1)
+	}
+	if c.Player == "" {
+		fmt.Println("no player specified. running with default (spotify).")
+		c.Player = "spotify"
+	}
+
+	err = config.Write(c, configFilePath)
+	maybePanic(err)
+
+	// TODO: select player by setting up map[string]interface{}(?) with string maped to static imported package
+
+	// setup queue
 	tracks := make(chan track.Track)
 	scrobbles := make(chan track.Track)
 

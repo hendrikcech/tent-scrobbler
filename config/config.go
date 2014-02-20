@@ -1,9 +1,9 @@
 package config
 
 import (
-	"crypto/sha256"
+	_ "crypto/sha256"
 	"encoding/json"
-	"github.com/tent/hawk-go"
+	_ "github.com/tent/hawk-go"
 	"github.com/tent/tent-client-go"
 	"io/ioutil"
 	"os"
@@ -20,14 +20,7 @@ type Config struct {
 	Player string
 }
 
-func Write(client *tent.Client, configFilePath string) (err error) {
-	config := Config{
-		ID:      client.Credentials.ID,
-		Key:     client.Credentials.Key,
-		App:     client.Credentials.App,
-		Servers: client.Servers,
-	}
-
+func Write(config Config, configFilePath string) (err error) {
 	enc, err := json.MarshalIndent(config, "", "\t")
 	if err != nil {
 		return
@@ -41,25 +34,15 @@ func Write(client *tent.Client, configFilePath string) (err error) {
 	return
 }
 
-func Read(configFilePath string) (client *tent.Client, err error) {
+func Read(configFilePath string) (config Config, err error) {
 	configFile, err := ioutil.ReadFile(configFilePath)
-
-	var config Config
 
 	err = json.Unmarshal(configFile, &config)
 	if err != nil {
 		return
 	}
 
-	return &tent.Client{
-		Credentials: &hawk.Credentials{
-			ID:   config.ID,
-			Key:  config.Key,
-			App:  config.App,
-			Hash: sha256.New,
-		},
-		Servers: config.Servers,
-	}, nil
+	return
 }
 
 func Exists(path string) (exists bool) {
