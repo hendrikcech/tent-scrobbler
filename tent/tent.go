@@ -26,7 +26,7 @@ func AuthUser(entity string, postType string) (client *tent.Client, err error) {
 			Write: []string{postType},
 		},
 		RedirectURI: "https://app.example.com/oauth",
-		Scopes: []string{"permissions"},
+		Scopes:      []string{"permissions"},
 	})
 	err = client.CreatePost(post)
 	if err != nil {
@@ -70,8 +70,8 @@ func ScrobbleTrack(client *tent.Client, postType string, track track.Track) (err
 		track.Name, track.Album, track.Artist)
 
 	post := &tent.Post{
-		Type:    postType,
-		Content: []byte(content),
+		Type:        postType,
+		Content:     []byte(content),
 		Permissions: &tent.PostPermissions{},
 	}
 

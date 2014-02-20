@@ -4,12 +4,12 @@ import (
 	"flag"
 	"fmt"
 	"github.com/hendrikcech/tent-scrobbler/config"
-	"github.com/hendrikcech/tent-scrobbler/spotify"
 	"github.com/hendrikcech/tent-scrobbler/example"
+	"github.com/hendrikcech/tent-scrobbler/spotify"
 	store "github.com/hendrikcech/tent-scrobbler/tent"
 	"github.com/hendrikcech/tent-scrobbler/track"
-	"github.com/tent/tent-client-go"
 	"github.com/tent/hawk-go"
+	"github.com/tent/tent-client-go"
 	"os"
 	"os/user"
 	"time"
@@ -63,7 +63,7 @@ func main() {
 		client = &tent.Client{
 			Servers: c.Servers,
 			Credentials: &hawk.Credentials{
-				ID: c.ID,
+				ID:  c.ID,
 				Key: c.Key,
 				App: c.App,
 			},
