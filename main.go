@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/user"
 	"time"
+	"crypto/sha256"
 )
 
 const PostType string = "http://cech.im/types/song/v0#"
@@ -66,6 +67,7 @@ func main() {
 				ID:  c.ID,
 				Key: c.Key,
 				App: c.App,
+				Hash: sha256.New,
 			},
 		}
 	}
